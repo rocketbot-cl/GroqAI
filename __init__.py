@@ -53,11 +53,22 @@ try:
         prompt = GetParams("prompt")
         model = GetParams("model")
         result_var = GetParams("result_var")
-        temperature = GetParams("temperature")
-        max_tokens = GetParams("max_tokens")
+        
+        # Parámetros opcionales con valores por defecto
+        temperature = GetParams("temperature")  # Ahora acepta valores entre 0 y 2
+        max_completion_tokens = GetParams("max_tokens")  # Renombrado para coincidir con la API
         stop_sequence = GetParams("stop_sequence")
-        generate_text(prompt, model, result_var, temperature,
-                      max_tokens, stop_sequence, SetVar, PrintException)
+        
+        generate_text(
+            prompt=prompt,
+            model=model,
+            result_var=result_var,
+            temperature=temperature,
+            max_tokens=max_completion_tokens,  # Pasamos el parámetro con el nombre antiguo por compatibilidad
+            stop_sequence=stop_sequence,
+            SetVar=SetVar,
+            PrintException=PrintException
+        )
 
     elif module == "ocr_document":
         model = GetParams("model")

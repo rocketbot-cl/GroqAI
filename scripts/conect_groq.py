@@ -54,17 +54,17 @@ def connect_to_groq(api_key, result_var, SetVar, PrintException):
         try:
             # print("\nListando modelos disponibles...")
             # Obtener la lista de modelos
-            # models_response = client.models.list()
+            models_response = client.models.list()
             
             # Extraer y mostrar los modelos disponibles
             # print("\nModelos disponibles:")
-            # available_models = []
-            # for model in models_response.data:
+            available_models = []
+            for model in models_response.data:
             #     print(f"- {model.id}")
-            #     available_models.append(model.id)
+                available_models.append(model.id)
             
-            # if not available_models:
-            #     print("¡Advertencia! No se encontraron modelos disponibles.")
+            if not available_models:
+                print("¡Advertencia! No se encontraron modelos disponibles.")
             
             # Almacenar el cliente globalmente
             set_client(client)
