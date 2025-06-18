@@ -7,12 +7,13 @@ import requests  # type: ignore
 from urllib.parse import urlparse  # Para analizar URLs
 import os  # Para validar la existencia de archivos locales
 from groq.resources.models import Models  # type: ignore
+import imghdr
 
 
 def is_valid_url(url):
     """
     Validate if a URL is accessible and is a valid image or PDF.
-    
+
     :param url: URL to validate
     :return: tuple (is_valid, is_pdf, error_message)
     """
@@ -43,7 +44,7 @@ def is_valid_url(url):
 def convert_markdown_table_to_text(text):
     """
     Convierte una tabla en formato Markdown a texto plano.
-    
+
     :param text: Texto que puede contener tablas en formato Markdown
     :return: Texto con las tablas convertidas a formato texto plano
     """
@@ -51,14 +52,14 @@ def convert_markdown_table_to_text(text):
     result = []
     in_table = False
     table_data = []
-    
+
     for line in lines:
         # Detectar si es una línea de tabla
         if '|' in line:
             # Si es una línea de separación (| --- | --- |), la ignoramos
             if re.match(r'\s*\|[\s\-]+\|\s*$', line) or re.match(r'\s*\|(?:[:\-]+\|)+\s*$', line):
                 continue
-                
+
             # Procesar la línea de la tabla
             cells = [cell.strip() for cell in line.split('|')]
             # Eliminar células vacías al inicio y final (debido a los | externos)
@@ -82,7 +83,8 @@ def convert_markdown_table_to_text(text):
                         formatted_cells = []
                         for i in range(len(headers)):
                             if row[i].strip():  # Solo incluir si el valor no está vacío
-                                formatted_cells.append(f"{headers[i]}: {row[i]}")
+                                formatted_cells.append(
+                                    f"{headers[i]}: {row[i]}")
                         if formatted_cells:  # Solo agregar la línea si hay algún valor
                             formatted_row = '; '.join(formatted_cells)
                             result.append(formatted_row)
@@ -90,7 +92,7 @@ def convert_markdown_table_to_text(text):
                 table_data = []
                 in_table = False
             result.append(line)
-    
+
     # Procesar última tabla si existe
     if in_table and table_data:
         headers = table_data[0]
@@ -103,115 +105,137 @@ def convert_markdown_table_to_text(text):
             if formatted_cells:  # Solo agregar la línea si hay algún valor
                 formatted_row = '; '.join(formatted_cells)
                 result.append(formatted_row)
-    
+
     return '\n'.join(result)
 
+def is_url(string):
+    """Check if string is a URL."""
+    try:
+        result = urlparse(string)
+        return all([result.scheme, result.netloc])
+    except:
+        return False
 
-def process_file(model, file_path, result_var, SetVar, PrintException):
+def encode_image(image_path):
     """
-    Process a file (PDF or image) with groq AI OCR.
-
-    :param model: The OCR model to use.
-    :param file_path: The absolute path to the file or the URL of the file to process.
-    :param result_var: Name of the variable to store the OCR result.
-    :param SetVar: Function to set variables in Rocketbot.
-    :param PrintException: Function to print exceptions in Rocketbot.
+    Encode the image file to base64.
     """
     try:
-        # Get the existing client
+        with open(image_path, "rb") as image_file:
+            # Detect image type
+            image_type = imghdr.what(image_file)
+            if not image_type:
+                raise ValueError("Archivo no reconocido como imagen válida")
+            
+            # Read and encode
+            image_file.seek(0)
+            base64_image = base64.b64encode(image_file.read()).decode('utf-8')
+            return f"data:image/{image_type};base64,{base64_image}"
+    except Exception as e:
+        raise Exception(f"Error al codificar la imagen: {str(e)}")
+
+def process_file(model, file_path, result_var, message="Por favor, describe lo que ves en esta imagen.", temperature=0.7, SetVar=None, PrintException=None):
+    """
+    Procesa un archivo de imagen usando el modelo de visión de Groq AI.
+    
+    Args:
+        model (str): ID del modelo a usar
+        file_path (str): Ruta al archivo o URL de la imagen
+        result_var (str): Nombre de la variable para almacenar el resultado
+        message (str): Mensaje/prompt para el modelo
+        temperature (float): Temperatura para la generación (default 0.7)
+        SetVar: Función para establecer variables en Rocketbot
+        PrintException: Función para imprimir excepciones en Rocketbot
+    """
+    try:
+        print("\n=== Procesando imagen con Groq AI ===")
+        
+        # Establecer resultado por defecto
+        if SetVar:
+            SetVar(result_var, None)
+        
+        # Obtener el cliente
         client = get_client()
         if not client:
-            raise Exception("You must connect to groq AI before using this command. Please run the connection module first.")
+            error_msg = "ERROR: Debe conectarse a Groq AI antes de usar este comando."
+            print(error_msg)
+            raise Exception(error_msg)
 
-        # Validate model parameter
+        # Validar parámetros básicos
         if not model:
-            raise Exception("You must specify a valid model for OCR.")
+            error_msg = "ERROR: Debe especificar un modelo"
+            print(error_msg)
+            raise Exception(error_msg)
 
-        # Validate file_path parameter
         if not file_path:
-            raise Exception("You must specify a valid file path or URL.")
+            error_msg = "ERROR: Debe proporcionar una ruta de archivo o URL"
+            print(error_msg)
+            raise Exception(error_msg)
 
-        # Detect if it's a URL or local file
-        is_url = file_path.startswith(("http://", "https://"))
-        
-        if is_url:
-            # Validate URL and get file type
-            is_valid, is_pdf, error_msg = is_valid_url(file_path)
-            if not is_valid:
-                raise Exception(f"Invalid or inaccessible URL: {error_msg}")
-                
-            document = {
-                "type": "document_url" if is_pdf else "image_url",
-                f"{'document' if is_pdf else 'image'}_url": file_path
-            }
+        # Preparar la imagen según sea URL o archivo local
+        if is_url(file_path):
+            image_data = {"url": file_path}
+            print("\nProcesando imagen desde URL...")
         else:
-            # Validate local file exists
+            # Verificar que el archivo existe
             if not os.path.exists(file_path):
-                raise Exception(f"Local file does not exist: {file_path}")
+                error_msg = f"ERROR: El archivo {file_path} no existe"
+                print(error_msg)
+                raise Exception(error_msg)
                 
-            # For local files, use mimetypes and encode content
-            mime_type, _ = mimetypes.guess_type(file_path)
-            if not mime_type:
-                raise Exception("Could not determine file type")
-                
-            is_pdf = mime_type == "application/pdf"
-            is_image = mime_type.startswith("image/") if mime_type else False
-            
-            if not (is_pdf or is_image):
-                raise Exception("File must be a valid PDF or image (JPEG, PNG, GIF, WEBP). Detected type: " + (mime_type if mime_type else "unknown"))
-            
-            with open(file_path, "rb") as file:
-                encoded_content = base64.b64encode(file.read()).decode("utf-8")
-                
-            if is_pdf:
-                document = {
-                    "type": "document_url",
-                    "document_url": f"data:application/pdf;base64,{encoded_content}"
-                }
-            else:
-                document = {
-                    "type": "image_url",
-                    "image_url": f"data:{mime_type};base64,{encoded_content}"
-                }
+            print("\nProcesando imagen local...")
+            try:
+                image_data = {"url": encode_image(file_path)}
+            except Exception as e:
+                error_msg = f"ERROR al procesar el archivo: {str(e)}"
+                print(error_msg)
+                raise Exception(error_msg)
 
+        print("\nEnviando solicitud a Groq AI...")
         try:
-            # Perform OCR using the `process` method
-            response = client.ocr.process(
+            response = client.chat.completions.create(
                 model=model,
-                document=document,
-                include_image_base64=not is_pdf  # Only include base64 for images
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": message
+                            },
+                            {
+                                "type": "image_url",
+                                "image_url": image_data
+                            }
+                        ]
+                    }
+                ],
+                temperature=temperature,
+                max_completion_tokens=1024,
+                stream=False
             )
-        except SDKError as e:
-            if "Invalid model" in str(e):
-                raise Exception(f"The model '{model}' is not valid for OCR. Please verify the model name.")
-            raise e
+            
+            # Extraer el texto generado
+            extracted_text = response.choices[0].message.content
+            
+            print("\n✓ Texto extraído exitosamente!")
+            
+            # Guardar el resultado
+            if SetVar:
+                SetVar(result_var, extracted_text)
+            
+            return extracted_text
 
-        # Extract the text from the response
-        extracted_text = ""
-        if response.pages:
-            for page in response.pages:
-                if page.markdown:
-                    extracted_text += page.markdown + "\n"
-        else:
-            extracted_text = "No text could be extracted from the document."
-
-        # Clean the Markdown content for better readability
-        clean_text = re.sub(r"!\[.*?\]\(.*?\)", "", extracted_text)  # Remove images
-        clean_text = re.sub(r"#\s*", "", clean_text)  # Remove Markdown headers
-        clean_text = clean_text.strip()  # Remove leading/trailing whitespace
-        
-        # Convert tables to text format
-        clean_text = convert_markdown_table_to_text(clean_text)
-
-        # Print debug information
-        print("DEBUG: OCR Cleaned Text =", clean_text)
-
-        # Set the result in Rocketbot
-        SetVar(result_var, clean_text)
+        except Exception as api_error:
+            error_msg = f"ERROR en la API de Groq: {str(api_error)}"
+            print(error_msg)
+            raise Exception(error_msg)
 
     except Exception as e:
-        SetVar(result_var, None)
-        print("Error processing file with groq AI OCR:")
+        error_msg = f"Error al procesar la imagen: {str(e)}"
+        print(error_msg)
+        print("\nDetalles del error:")
         print(traceback.format_exc())
-        PrintException()
-        raise e
+        if PrintException:
+            PrintException()
+        raise Exception(error_msg)

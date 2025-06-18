@@ -359,6 +359,158 @@
       "windows": true,
       "mac": true,
       "docker": false
+    },
+    {
+      "en": {
+        "title": "OCR to Image/PDF",
+        "description": "Process an image or PDF with GroqAI OCR",
+        "title_options": "Select Option",
+        "options": null
+      },
+      "es": {
+        "title": "OCR a Imagen/PDF",
+        "description": "Procesa una imagen o PDF con el OCR de GroqAI",
+        "title_options": "Seleccione una opción",
+        "options": null
+      },
+      "pr": {
+        "title": "OCR para Imagem/PDF",
+        "description": "Processa uma imagem ou PDF com o OCR do GroqAI",
+        "title_options": "Selecione uma opção",
+        "options": null
+      },
+      "form": {
+        "css": "modal-lg",
+        "inputs": [
+          {
+            "type": "input",
+            "placeholder": {
+              "es": "meta-llama/llama-4-scout-17b-16e-instruct",
+              "en": "meta-llama/llama-4-scout-17b-16e-instruct",
+              "pr": "meta-llama/llama-4-scout-17b-16e-instruct"
+            },
+            "title": {
+              "es": "Modelo:",
+              "en": "Model:",
+              "pr": "Modelo:"
+            },
+            "description": {
+              "es": "Nombre del modelo OCR a utilizar",
+              "en": "Name of the OCR model to use",
+              "pr": "Nome do modelo OCR a ser usado"
+            },
+            "help": {
+              "es": "meta-llama/llama-4-scout-17b-16e-instruct",
+              "en": "meta-llama/llama-4-scout-17b-16e-instruct",
+              "pr": "meta-llama/llama-4-scout-17b-16e-instruct"
+            },
+            "id": "model",
+            "css": "col-md-6",
+            "required": true
+          },
+          {
+            "type": "file_select",
+            "placeholder": {
+              "es": "Ruta o URL del archivo",
+              "en": "Path or URL of the file",
+              "pr": "Caminho ou URL do arquivo"
+            },
+            "title": {
+              "es": "Archivo o URL:",
+              "en": "File or URL:",
+              "pr": "Arquivo ou URL:"
+            },
+            "description": {
+              "es": "Permite subir un archivo local o ingresar una url hacia un archivo online",
+              "en": "Allows uploading a local file or entering a url to an online file",
+              "pr": "Permite fazer o upload de um arquivo local ou entrar uma url para um arquivo online"
+            },
+            "id": "file_path",
+            "css": "col-md-6",
+            "required": true
+          },
+          {
+            "type": "input",
+            "placeholder": {
+              "es": "resultadoOCR",
+              "en": "ocrResult",
+              "pr": "resultadoOCR"
+            },
+            "title": {
+              "es": "Asignar a variable:",
+              "en": "Assign to variable:",
+              "pr": "Atribuir à variável:"
+            },
+            "description": {
+              "es": "Nombre de la variable donde se guardará el resultado del OCR",
+              "en": "Variable name to store the OCR result",
+              "pr": "Nome da variável para armazenar o resultado do OCR"
+            },
+            "help": {
+              "es": "Nombre de variable sin {}",
+              "en": "Variable name without {}",
+              "pr": "Nome da variável sem {}"
+            },
+            "id": "result_var",
+            "css": "col-md-6",
+            "remove_vars": true,
+            "required": true
+          },
+          {
+            "type": "input",
+            "placeholder": {
+              "es": "Por favor, describe lo que ves en esta imagen.",
+              "en": "Please describe what you see in this image.",
+              "pr": "Por favor, descreva o que você vê nesta imagem."
+            },
+            "title": {
+              "es": "Mensaje (opcional):",
+              "en": "Message (optional):",
+              "pr": "Mensagem (opcional):"
+            },
+            "description": {
+              "es": "Instrucción personalizada para el modelo sobre qué buscar o extraer de la imagen",
+              "en": "Custom instruction for the model about what to look for or extract from the image",
+              "pr": "Instrução personalizada para o modelo sobre o que procurar ou extrair da imagem"
+            },
+            "id": "message",
+            "css": "col-md-12",
+            "required": false
+          },
+          {
+            "type": "input",
+            "placeholder": {
+              "es": "0.7",
+              "en": "0.7",
+              "pr": "0.7"
+            },
+            "title": {
+              "es": "Temperatura (opcional):",
+              "en": "Temperature (optional):",
+              "pr": "Temperatura (opcional):"
+            },
+            "description": {
+              "es": "Valor entre 0 y 2. Valores más bajos son más precisos, valores más altos son más creativos. Por defecto: 0.7",
+              "en": "Value between 0 and 2. Lower values are more precise, higher values are more creative. Default: 0.7",
+              "pr": "Valor entre 0 e 2. Valores mais baixos são mais precisos, valores mais altos são mais criativos. Padrão: 0.7"
+            },
+            "id": "temperature",
+            "css": "col-md-6",
+            "required": false
+          }
+        ]
+      },
+      "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAAFACAMAAAD6TlWYAAADAFBMVEVHcEzwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUjfwUTbvUTbvUDXvTzTvTzPvUDTwUjfvUTXvUjfwWkHxaFDzeWT0iXf2m4v3qJv4tKj4ua/4uKz4saX2nY31j33zfWnyblbxX0bwVTrxYEf5vLH719H96uf+9vT+/Pz+/v7////+/f3++Pj97+z83tn6yL/0iHXyalPwVjvxZU30i3n4ua7++/v96+j6zMT2oZLydV/wWT/wUjfzgG385eH98vH60MjxYUj1lIT70sr+9/b96OX4tqv73Nf5v7Xze2bwUzj72tTycVvzd2L++fn2o5TwXEL97er71M3wUjf6y8P98O785uL5xLvxaVLwWD3+9PL++vr1koHwXkX5wrnwUjf3qp33pJb3p5n4r6P5vrP6zsb84t3zfmr84NvwUjf0hnPyb1n3rJ/wUjf0g3D+/fz71c798e7wUjfxY0rybFX98e/zfGjyb1j5wbfxZk7wUjj2mYn+/v3ycl3+9PPwUjfwUjf849/wUjfycFr73df3q532n5DxZEz85+P2oZP1lob5xr30jXv73dj85OD+///wUjfwUjfwUjf4s6fwUjfwUjf1mIjwUjf3raDwUjfwUjfwUjfwUjcgsxlQAAABAHRSTlMAAQgUIzlMY3mOorLCztjg6O7y9CUCED5dfJu33+r6/v8EM1iAqcvi/Qmr0u38BSJPhrv4Ejt2+RhL8RoXldT3Q5ArxaXmUHHIjNvdNUCgR66oMJwg5WjVRLqRCiZUiVzMLcM91rCLVShmYJNr////////nf////////////////////////////////////////////////////////9K/////////////////////////////zf//////////////3v////////////1////U/////8c////////////////DL//g/////////////////+XbIX/tQf/Df+YWW5Fos7nqAAAEu9JREFUeAHswQNWRQEABcBn27ax/+Wlw+rbuDMEAAAAAAAAAAAAwD2QFM2wHC+Ikqyomm6YlmXblmUauqYqsiQKPMc6NEUSf4HrMX4QRrGapHaWF1vkmZ0mahyFgc94LvEDSrqqm7br7aE42GD3XdvUFV0S721kuHCal7U4ybrMU/hJjl2lNxIDQQAOmL00YVYtGsbMqzijMDMzc3z/5z3EivUfob7paVVHQhlHwysUS+VKqor/VE1VyqViwbX0avVG8msTnDS/Jhv1mjsLo/U3/ocScEXon3hk2oHF0t0uzQQMQrBgptSy+40zNBv3GQRi/tzskLVbY76x0Afh+hYa8zbulFppcYlACrK0uGzZSukOrawySMRWV0Ld9szuj7X1NCRLb6xt2jHJPVvbkwQKkMntrR7zy9pO1oMyXnbH7KLXs7PbB6X6dnfM/QoLw3sUytG94YKZjW1/LAct5A72Dex4h+UjaOOofGhaZzsOCDRCTo5NanjfT8+a0Ezz7PS7MdM750FD3nnRjJffiE+gJeKPGPAqnE8waIsl5nX//KLr0Np69ELn/C4TDJpjiUt9m8eVDwMEV5o2k/Y1hRHodVvH/DbP0jBEurKp3/jeTMAgEzeajXGt3Aej9JVrOuU3sJuHYfK7Gm3j4VsY6POwLoe/mxSMlLoZ1KJ8NCgMRWMadOPaXBXGqp4rXyXTi3kYLL84rTa/0DiB0ch4SGV+d/cw3v2dwvZ2CwvcKut1YR9W8MNq8ns4gSUeH5Tk9wXW+KIgwfAJLPIofYo3fVjFl7xJ7m5hmds7qeere1jnfkBifxuHhcaltbraIqy0WJN0vzrPw0r5cynXrcFYFZaqxmRcWEcorEVHxOe3lYLFUlui87v8DKt9vhS8gJ9guSehq7hwnYfl0tcFkQukD9brE7hINifggAlhd4V2BU6otAX9AJ8JnEDWxPwG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",
+      "module_name": "GroqAI",
+      "module": "ocr_document",
+      "visible": true,
+      "options": false,
+      "father": "module",
+      "group": "scripts",
+      "linux": true,
+      "windows": true,
+      "mac": true,
+      "docker": false
     }
   ]
 }

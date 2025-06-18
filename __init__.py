@@ -74,8 +74,26 @@ try:
         model = GetParams("model")
         file_path = GetParams("file_path")
         result_var = GetParams("result_var")
-        process_file(model, file_path, result_var, SetVar, PrintException)
-    
+        message = GetParams("message")  # Nuevo parámetro opcional
+        temperature = GetParams("temperature")  # Nuevo parámetro opcional
+        
+        # Procesar los parámetros opcionales
+        if temperature:
+            try:
+                temperature = float(temperature)
+            except ValueError:
+                temperature = 0.7  # Valor por defecto si no es un número válido
+        
+        process_file(
+            model=model,
+            file_path=file_path,
+            result_var=result_var,
+            message=message if message else "Por favor, describe lo que ves en esta imagen.",
+            temperature=temperature if temperature is not None else 0.7,
+            SetVar=SetVar,
+            PrintException=PrintException
+        )
+
     else:
         raise Exception(f"El módulo '{module}' no está implementado.")
 except Exception as e:
