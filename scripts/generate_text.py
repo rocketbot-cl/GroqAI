@@ -17,7 +17,7 @@ def generate_text(prompt, model, result_var, temperature, max_tokens, stop_seque
     :param PrintException: Función para imprimir excepciones en Rocketbot.
     """
     try:
-        print("\n=== Generando texto con Groq AI ===")
+        print("\n=== Generating text with Groq AI ===")
         
         # Establecer resultado por defecto
         SetVar(result_var, None)
@@ -25,18 +25,18 @@ def generate_text(prompt, model, result_var, temperature, max_tokens, stop_seque
         # Obtener el cliente
         client = get_client()
         if not client:
-            error_msg = "ERROR: Debe conectarse a Groq AI antes de usar este comando. Por favor, ejecute primero el módulo de conexión."
+            error_msg = "ERROR: You must connect to Groq AI before using this command. Please run the connection module first."
             print(error_msg)
             raise Exception(error_msg)
 
         # Validar parámetros requeridos
         if not prompt:
-            error_msg = "ERROR: El prompt es requerido."
+            error_msg = "ERROR: Prompt is required."
             print(error_msg)
             raise Exception(error_msg)
             
         if not model:
-            error_msg = "ERROR: El modelo es requerido."
+            error_msg = "ERROR: Model is required."
             print(error_msg)
             raise Exception(error_msg)
 
@@ -46,17 +46,17 @@ def generate_text(prompt, model, result_var, temperature, max_tokens, stop_seque
             max_tok = int(max_tokens) if max_tokens else 100
             stop = [stop_sequence] if stop_sequence else None
         except ValueError as e:
-            error_msg = f"ERROR: Error al convertir parámetros: {str(e)}"
+            error_msg = f"ERROR: Error converting parameters: {str(e)}"
             print(error_msg)
             raise Exception(error_msg)
 
-        print("\nParámetros de generación:")
-        print(f"- Modelo: {model}")
-        print(f"- Temperatura: {temp}")
-        print(f"- Máximo de tokens: {max_tok}")
-        print(f"- Secuencia de parada: {stop}")
+        print("\nGeneration parameters:")
+        print(f"- Model: {model}")
+        print(f"- Temperature: {temp}")
+        print(f"- Maximum tokens: {max_tok}")
+        print(f"- Stop sequence: {stop}")
         
-        print("\nGenerando respuesta...")
+        print("\nGenerating response...")
         # Crear la solicitud de chat completion
         try:
             response = client.chat.completions.create(
@@ -72,8 +72,13 @@ def generate_text(prompt, model, result_var, temperature, max_tokens, stop_seque
                 stop=stop
             )
         except BadRequestError as e:
-            if "model_decommissioned" in str(e):
-                error_msg = f"ERROR: El modelo '{model}' ha sido descontinuado y ya no está soportado.\n\nPara ver los modelos disponibles puede:\n1. Ejecutar el comando 'Obtener modelos disponibles' del módulo\n2. Consultar la documentación oficial en https://console.groq.com/docs/models"
+            error_str = str(e)
+            if "model_decommissioned" in error_str:
+                error_msg = f"ERROR: The model '{model}' has been discontinued and is no longer supported.\n\nTo see available models you can:\n1. Run the 'Get available models' command from the module\n2. Check the official documentation at https://console.groq.com/docs/models"
+                print(error_msg)
+                raise Exception(error_msg)
+            elif "does not support chat completions" in error_str:
+                error_msg = f"ERROR: The model '{model}' is not compatible with text generation. This model is designed for another purpose (e.g., audio transcription). Please use a chat model like llama or gemma."
                 print(error_msg)
                 raise Exception(error_msg)
             raise e
@@ -81,15 +86,15 @@ def generate_text(prompt, model, result_var, temperature, max_tokens, stop_seque
         # Extraer el texto generado
         generated_text = response.choices[0].message.content
         
-        print("\n✓ Texto generado exitosamente!")
+        print("\n✓ Text generated successfully!")
         
         # Guardar el resultado
         SetVar(result_var, generated_text)
 
     except Exception as e:
-        error_msg = f"Error al generar texto: {str(e)}"
+        error_msg = f"Error generating text: {str(e)}"
         print(error_msg)
-        print("\nDetalles del error:")
+        print("\nError details:")
         print(traceback.format_exc())
         if PrintException:
             PrintException()

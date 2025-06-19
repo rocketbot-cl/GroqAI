@@ -27,27 +27,27 @@ def connect_to_groq(api_key, result_var, SetVar, PrintException):
         # Establecer el resultado como False por defecto
         SetVar(result_var, False)
         
-        print("Iniciando conexión con Groq AI...")
-        print(f"Validando API key: {'*' * (len(api_key)-4) + api_key[-4:] if isinstance(api_key, str) else 'No proporcionada'}")
+        print("Starting connection with Groq AI...")
+        print(f"Validating API key: {'*' * (len(api_key)-4) + api_key[-4:] if isinstance(api_key, str) else 'Not provided'}")
         
         # Validar que se proporcione la api_key
         if not isinstance(api_key, str):
-            error_msg = "ERROR: La API key debe ser una cadena de texto."
+            error_msg = "ERROR: API key must be a text string."
             print(error_msg)
             raise Exception(error_msg)
         
         api_key = api_key.strip()
         if not api_key:
-            error_msg = "ERROR: La API key es requerida. Por favor, proporcione una API key válida."
+            error_msg = "ERROR: API key is required. Please provide a valid API key."
             print(error_msg)
             raise Exception(error_msg)
             
         if not api_key.startswith("gsk_"):
-            error_msg = "ERROR: La API key debe comenzar con 'gsk_'. Por favor, verifique que está usando una API key válida de Groq."
+            error_msg = "ERROR: API key must start with 'gsk_'. Please verify you are using a valid Groq API key."
             print(error_msg)
             raise Exception(error_msg)
 
-        print("Intentando inicializar el cliente de Groq...")
+        print("Attempting to initialize Groq client...")
         # Inicializar el cliente de Groq y almacenarlo globalmente
         client = Groq(api_key=api_key)
 
@@ -64,19 +64,19 @@ def connect_to_groq(api_key, result_var, SetVar, PrintException):
                 available_models.append(model.id)
             
             if not available_models:
-                print("¡Advertencia! No se encontraron modelos disponibles.")
+                print("Warning! No available models found.")
             
             # Almacenar el cliente globalmente
             set_client(client)
             SetVar(result_var, True)
-            print("\n✓ Conexión establecida exitosamente!")
+            print("\n✓ Connection established successfully!")
 
         except Exception as sdk_error:
             error_msg = ""
             if "401" in str(sdk_error):
-                error_msg = "ERROR: API key inválida o expirada. Por favor, verifique sus credenciales e intente nuevamente."
+                error_msg = "ERROR: Invalid or expired API key. Please verify your credentials and try again."
             else:
-                error_msg = f"ERROR al conectar con Groq AI: {str(sdk_error)}"
+                error_msg = f"ERROR connecting to Groq AI: {str(sdk_error)}"
             print(error_msg)
             print("Detalles del error:")
             print(traceback.format_exc())

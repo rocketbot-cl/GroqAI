@@ -8,7 +8,10 @@ from urllib.parse import urlparse  # Para analizar URLs
 import os  # Para validar la existencia de archivos locales
 from groq.resources.models import Models  # type: ignore
 import imghdr
+import os.path
 
+# Add after other constants at the top
+SUPPORTED_IMAGE_FORMATS = ['jpeg', 'jpg', 'png', 'gif', 'webp', 'bmp']
 
 def is_valid_url(url):
     """
@@ -18,24 +21,16 @@ def is_valid_url(url):
     :return: tuple (is_valid, is_pdf, error_message)
     """
     try:
-        # Parse the URL
-        parsed = urlparse(url)
-        if not all([parsed.scheme, parsed.netloc]):
-            return False, False, "Invalid URL"
-
-        # Try to get headers without downloading the full content
-        response = requests.head(url, allow_redirects=True)
-        if response.status_code != 200:
-            return False, False, f"URL is not accessible (Status: {response.status_code})"
-
+        response = requests.head(url)
+        
         # Check content type
         content_type = response.headers.get('content-type', '').lower()
         if 'application/pdf' in content_type:
             return True, True, None
-        elif any(img_type in content_type for img_type in ['image/jpeg', 'image/png', 'image/gif', 'image/webp']):
+        elif any(f'image/{fmt}' in content_type for fmt in SUPPORTED_IMAGE_FORMATS):
             return True, False, None
         else:
-            return False, False, f"Unsupported file type: {content_type}"
+            return False, False, f"Unsupported file type: {content_type}. Supported formats are: {', '.join(SUPPORTED_IMAGE_FORMATS)}"
 
     except requests.exceptions.RequestException as e:
         return False, False, f"Error accessing URL: {str(e)}"
@@ -125,30 +120,57 @@ def encode_image(image_path):
             # Detect image type
             image_type = imghdr.what(image_file)
             if not image_type:
-                raise ValueError("Archivo no reconocido como imagen válida")
+                raise ValueError("File not recognized as a valid image")
             
             # Read and encode
             image_file.seek(0)
             base64_image = base64.b64encode(image_file.read()).decode('utf-8')
             return f"data:image/{image_type};base64,{base64_image}"
     except Exception as e:
-        raise Exception(f"Error al codificar la imagen: {str(e)}")
+        raise Exception(f"Error encoding image: {str(e)}")
 
-def process_file(model, file_path, result_var, message="Por favor, describe lo que ves en esta imagen.", temperature=0.7, SetVar=None, PrintException=None):
+def validate_image_file(file_path):
     """
-    Procesa un archivo de imagen usando el modelo de visión de Groq AI.
+    Validates if a file is a supported image file.
     
     Args:
-        model (str): ID del modelo a usar
-        file_path (str): Ruta al archivo o URL de la imagen
-        result_var (str): Nombre de la variable para almacenar el resultado
-        message (str): Mensaje/prompt para el modelo
-        temperature (float): Temperatura para la generación (default 0.7)
-        SetVar: Función para establecer variables en Rocketbot
-        PrintException: Función para imprimir excepciones en Rocketbot
+        file_path (str): Path to the file to validate
+        
+    Returns:
+        tuple: (is_valid, error_message)
     """
     try:
-        print("\n=== Procesando imagen con Groq AI ===")
+        # Check file extension
+        ext = os.path.splitext(file_path)[1].lower().replace('.', '')
+        if ext not in SUPPORTED_IMAGE_FORMATS:
+            return False, f"ERROR: Unsupported file format '.{ext}'. Supported formats are: {', '.join(SUPPORTED_IMAGE_FORMATS)}"
+        
+        # Verify it's actually an image using imghdr
+        with open(file_path, 'rb') as f:
+            actual_type = imghdr.what(f)
+            if not actual_type:
+                return False, "ERROR: The file is not recognized as a valid image file. Please provide a valid image file."
+            if actual_type not in SUPPORTED_IMAGE_FORMATS:
+                return False, f"ERROR: Unsupported image format '{actual_type}'. Supported formats are: {', '.join(SUPPORTED_IMAGE_FORMATS)}"
+            
+        return True, None
+        
+    except Exception as e:
+        return False, f"ERROR validating image file: {str(e)}"
+
+def process_file(model, file_path, result_var, message=None, temperature=0.7, SetVar=None, PrintException=None):
+
+    """Process an image file using Groq AI's vision model.
+    
+    Args:
+        model (str): Model ID to use
+        file_path (str): Path to file or image URL
+        result_var (str): Variable name to store the result
+        temperature (float): Temperature for generation (default 0.7)
+        message (str): Message/prompt for the model
+    """
+    try:
+        print("\n=== Processing image with Groq AI ===")
         
         # Establecer resultado por defecto
         if SetVar:
@@ -157,84 +179,139 @@ def process_file(model, file_path, result_var, message="Por favor, describe lo q
         # Obtener el cliente
         client = get_client()
         if not client:
-            error_msg = "ERROR: Debe conectarse a Groq AI antes de usar este comando."
+            error_msg = "ERROR: You must connect to Groq AI before using this command. Please run the connection module first."
             print(error_msg)
             raise Exception(error_msg)
 
         # Validar parámetros básicos
         if not model:
-            error_msg = "ERROR: Debe especificar un modelo"
+            error_msg = "ERROR: Model must be specified"
             print(error_msg)
             raise Exception(error_msg)
 
         if not file_path:
-            error_msg = "ERROR: Debe proporcionar una ruta de archivo o URL"
+            error_msg = "ERROR: File path or URL must be provided"
             print(error_msg)
             raise Exception(error_msg)
 
         # Preparar la imagen según sea URL o archivo local
         if is_url(file_path):
-            image_data = {"url": file_path}
-            print("\nProcesando imagen desde URL...")
-        else:
-            # Verificar que el archivo existe
-            if not os.path.exists(file_path):
-                error_msg = f"ERROR: El archivo {file_path} no existe"
+            # Validate URL points to an image
+            is_valid, is_pdf, url_error = is_valid_url(file_path)
+            if not is_valid:
+                error_msg = f"ERROR: Invalid image URL - {url_error}"
+                print(error_msg)
+                raise Exception(error_msg)
+            if is_pdf:
+                error_msg = f"ERROR: PDF files are not supported. Supported formats are: {', '.join(SUPPORTED_IMAGE_FORMATS)}"
                 print(error_msg)
                 raise Exception(error_msg)
                 
-            print("\nProcesando imagen local...")
+            image_data = {"url": file_path}
+            print("\nProcessing image from URL...")
+        else:
+            # Validate local file is an image
+            file_ext = file_path.lower().split('.')[-1]
+            if file_ext not in SUPPORTED_IMAGE_FORMATS:
+                error_msg = f"ERROR: Unsupported file format '.{file_ext}'. Supported formats are: {', '.join(SUPPORTED_IMAGE_FORMATS)}"
+                print(error_msg)
+                raise Exception(error_msg)
+            
+            # Validate image file
+            is_valid, validation_error = validate_image_file(file_path)
+            if not is_valid:
+                print(validation_error)
+                raise Exception(validation_error)
+                
+            print("\nProcessing local image...")
             try:
                 image_data = {"url": encode_image(file_path)}
             except Exception as e:
-                error_msg = f"ERROR al procesar el archivo: {str(e)}"
+                error_msg = f"ERROR processing file: {str(e)}"
                 print(error_msg)
                 raise Exception(error_msg)
 
-        print("\nEnviando solicitud a Groq AI...")
+        print("\nSending request to Groq AI...")
         try:
-            response = client.chat.completions.create(
-                model=model,
-                messages=[
+            # Prepare the message content based on model
+            if "gemma" in model.lower():
+                # Gemma models expect a simple string content
+                content = image_data["url"]
+                if message:
+                    content = f"{message}\n{content}"
+                
+                messages = [
                     {
                         "role": "user",
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": message
-                            },
-                            {
-                                "type": "image_url",
-                                "image_url": image_data
-                            }
-                        ]
+                        "content": content
                     }
-                ],
-                temperature=temperature,
-                max_completion_tokens=1024,
-                stream=False
+                ]
+            else:
+                # Default structure for Llama and other models
+                content = [
+                    {
+                        "type": "text",
+                        "text": message if message else "Please describe what you see in this image."
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": image_data["url"]
+                        }
+                    }
+                ]
+                
+                messages = [
+                    {
+                        "role": "user",
+                        "content": content
+                    }
+                ]
+
+            # Create chat completion
+            completion = client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=temperature
             )
             
             # Extraer el texto generado
-            extracted_text = response.choices[0].message.content
+            extracted_text = completion.choices[0].message.content
             
-            print("\n✓ Texto extraído exitosamente!")
+            print("\n✓ Text extracted successfully!")
             
             # Guardar el resultado
-            if SetVar:
-                SetVar(result_var, extracted_text)
+            if SetVar: SetVar(result_var, extracted_text)
             
             return extracted_text
 
         except Exception as api_error:
-            error_msg = f"ERROR en la API de Groq: {str(api_error)}"
-            print(error_msg)
-            raise Exception(error_msg)
+            error_str = str(api_error)
+            if "model_decommissioned" in error_str:
+                error_msg = f"ERROR: The model '{model}' has been discontinued and is no longer supported.\n\nTo see available models you can:\n1. Run the 'Get available models' command from the module\n2. Check the official documentation at https://console.groq.com/docs/models"
+                print(error_msg)
+                raise Exception(error_msg)
+            elif "does not support chat completions" in error_str.lower():
+                error_msg = f"ERROR: The model '{model}' is not compatible with OCR/image processing. This model is designed for another purpose (e.g., audio transcription). Please use a vision-capable model that supports chat completions."
+                print(error_msg)
+                raise Exception(error_msg)
+            elif "does not support" in error_str.lower() and ("vision" in error_str.lower() or "image" in error_str.lower() or "multimodal" in error_str.lower()):
+                error_msg = f"ERROR: The model '{model}' is not compatible with image processing. This model is designed for another purpose (e.g., text generation or audio transcription). Please use a vision-capable model like GPT-4 Vision or Claude 3."
+                print(error_msg)
+                raise Exception(error_msg)
+            elif "context deadline exceeded" in error_str.lower():
+                error_msg = "ERROR: Could not process the image. Please verify you are providing a valid image file in one of these formats: " + ", ".join(SUPPORTED_IMAGE_FORMATS)
+                print(error_msg)
+                raise Exception(error_msg)
+            else:
+                error_msg = f"ERROR in Groq API: {str(api_error)}"
+                print(error_msg)
+                raise Exception(error_msg)
 
     except Exception as e:
-        error_msg = f"Error al procesar la imagen: {str(e)}"
+        error_msg = f"Error processing image: {str(e)}"
         print(error_msg)
-        print("\nDetalles del error:")
+        print("\nError details:")
         print(traceback.format_exc())
         if PrintException:
             PrintException()
