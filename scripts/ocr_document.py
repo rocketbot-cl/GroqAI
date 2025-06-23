@@ -233,48 +233,53 @@ def process_file(model, file_path, result_var, message=None, temperature=0.7, Se
 
         print("\nSending request to Groq AI...")
         try:
-            # Prepare the message content based on model
-            if "gemma" in model.lower():
-                # Gemma models expect a simple string content
-                content = image_data["url"]
-                if message:
-                    content = f"{message}\n{content}"
-                
-                messages = [
-                    {
-                        "role": "user",
-                        "content": content
+            # First try with complex content structure
+            content = [
+                {
+                    "type": "text",
+                    "text": message if message else "Please describe what you see in this image."
+                },
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": image_data["url"]
                     }
-                ]
-            else:
-                # Default structure for Llama and other models
-                content = [
-                    {
-                        "type": "text",
-                        "text": message if message else "Please describe what you see in this image."
-                    },
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": image_data["url"]
-                        }
-                    }
-                ]
-                
-                messages = [
-                    {
-                        "role": "user",
-                        "content": content
-                    }
-                ]
-
-            # Create chat completion
-            completion = client.chat.completions.create(
-                model=model,
-                messages=messages,
-                temperature=temperature
-            )
+                }
+            ]
             
+            messages = [
+                {
+                    "role": "user",
+                    "content": content
+                }
+            ]
+
+            try:
+                # Try first with complex structure
+                completion = client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=temperature
+                )
+            except Exception as complex_error:
+                if "message[0].content must be a string" in str(complex_error):
+                    # If failed with complex structure, try with simple string content
+                    simple_content = f"{message if message else 'Please describe what you see in this image.'}\n{image_data['url']}"
+                    messages = [
+                        {
+                            "role": "user",
+                            "content": simple_content
+                        }
+                    ]
+                    completion = client.chat.completions.create(
+                        model=model,
+                        messages=messages,
+                        temperature=temperature
+                    )
+                else:
+                    # If it's a different error, raise it
+                    raise complex_error
+        
             # Extraer el texto generado
             extracted_text = completion.choices[0].message.content
             
@@ -289,6 +294,14 @@ def process_file(model, file_path, result_var, message=None, temperature=0.7, Se
             error_str = str(api_error)
             if "model_decommissioned" in error_str:
                 error_msg = f"ERROR: The model '{model}' has been discontinued and is no longer supported.\n\nTo see available models you can:\n1. Run the 'Get available models' command from the module\n2. Check the official documentation at https://console.groq.com/docs/models"
+                print(error_msg)
+                raise Exception(error_msg)
+            elif "model_terms_required" in error_str:
+                error_msg = f"ERROR: El modelo '{model}' requiere aceptación de términos y condiciones.\nPor favor, solicite al administrador de la organización que acepte los términos en:\nhttps://console.groq.com/playground?model={model}"
+                print(error_msg)
+                raise Exception(error_msg)
+            elif "request_too_large" in error_str or "Request Entity Too Large" in error_str:
+                error_msg = f"ERROR: La imagen es demasiado grande para ser procesada con el modelo '{model}'.\nPuede intentar:\n1. Usar un modelo más robusto para OCR\n2. Reducir el tamaño o peso de la imagen\n3. Dividir la imagen en secciones más pequeñas"
                 print(error_msg)
                 raise Exception(error_msg)
             elif "does not support chat completions" in error_str.lower():
