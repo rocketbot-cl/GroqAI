@@ -8,7 +8,7 @@ Módulo para interagir com os modelos do Groq AI a partir do Rocketbot.
 
 *Read this in other languages: [English](Manual_GroqAI.md), [Português](Manual_GroqAI.pr.md), [Español](Manual_GroqAI.es.md)*
   
-![banner](imgs/Banner_GroqAI.png o jpg)
+![banner](imgs/Banner_GroqAI.jpg)
 ## Como instalar este módulo
   
 Para instalar o módulo no Rocketbot Studio, pode ser feito de duas formas:
